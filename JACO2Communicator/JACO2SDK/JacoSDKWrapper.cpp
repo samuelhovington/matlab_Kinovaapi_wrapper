@@ -48,6 +48,7 @@ int (*MyGetGlobalTrajectoryInfo)(TrajectoryFIFO &Response);
 int (*MySendAdvanceTrajectory)(TrajectoryPoint command);
 int (*MySetPositionLimitDistance)(float Command[COMMAND_SIZE]);
 int (*MySetActuatorPID)(unsigned int address, float P, float I, float D);
+int (*MyRefresDevicesList)();
 
 
 
@@ -64,7 +65,10 @@ bool openKinovaLibrary()
     if(commandLayer_handle == NULL )
     {
         mexPrintf("Loading library..."); 
+//         For USB control, choose CommandLayerWindows.dll
         commandLayer_handle = LoadLibrary("CommandLayerWindows.dll");
+//         For Ethernet control choose CommandLayerEthernet.dll
+//         commandLayer_handle = LoadLibrary("CommandLayerEthernet.dll");
         if(commandLayer_handle == NULL )
         {
             mexPrintf("Failed to load library.\n");
@@ -126,9 +130,10 @@ bool openKinovaLibrary()
     MySetPositionLimitDistance = (int(*)(float Command[COMMAND_SIZE])) GetProcAddress(commandLayer_handle, "SetPositionLimitDistance");
     MySetActuatorPID = (int(*)(unsigned int, float, float, float)) GetProcAddress(commandLayer_handle, "SetActuatorPID");
     MyGetGlobalTrajectoryInfo = (int(*)(TrajectoryFIFO &Response)) GetProcAddress(commandLayer_handle, "GetGlobalTrajectoryInfo");
+    MyRefresDevicesList = (int(*)()) GetProcAddress(commandLayer_handle, "RefresDevicesList");
 
-
-
+    
+    
     
     if (MyInitAPI == NULL || MyCloseAPI == NULL || MyGetGeneralInformations == NULL || MyMoveHome == NULL)        
     {
@@ -138,14 +143,14 @@ bool openKinovaLibrary()
     else
     {
         mexPrintf(" Success\n");
-
+        
         result = (*MyInitAPI)();
-
+        
+//         Uncomment the following line to control the arm with ethernet 
+        (*MyRefresDevicesList)();
         //mexPrintf("Initialization's result: %d\n", result);           
 
         devicesCount = MyGetDevices(list, result);
-
-        //cout << "Found a robot on the USB bus (" << list[i].SerialNumber << ")" << endl;
 
         mexPrintf("Verifying number of devices...");
         if (devicesCount == 0)
